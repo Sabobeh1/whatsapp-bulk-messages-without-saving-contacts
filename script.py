@@ -49,19 +49,30 @@ for _, row in data.iterrows():
     driver.get(url)
 
     try:
-        # Wait for the message input box to be present
-        input_box = WebDriverWait(driver, 3).until(
+        # Wait for either the message input box or the "Continue to Chat" button
+        input_box = WebDriverWait(driver, 35).until(
             EC.presence_of_element_located((By.XPATH, '//div[@contenteditable="true"][@data-tab="10"]'))
         )
-    except Exception:
+        
+        # Check if we need to click "Continue to Chat" button
+        try:
+            continue_button = WebDriverWait(driver, 5).until(
+                EC.element_to_be_clickable((By.XPATH, '//div[@role="button"][@title="Continue to Chat"]'))
+            )
+            print(f"Clicking 'Continue to Chat' for {phone}...")
+            continue_button.click()
+            sleep(2)  # Wait for chat to open
+        except:
+            # If no "Continue to Chat" button, we're already in the chat
+            pass
+
+        # Now try to send the message
+        sleep(2)
+        input_box.send_keys(Keys.ENTER)
+        sleep(5)
+        print(f"✅  Sent to {phone}: \"{personalised_text}\"")
+    except Exception as e:
         print(f"❌  Could not open chat for {phone}")
         continue
 
-    sleep(2)
-    input_box.send_keys(Keys.ENTER)
-    sleep(5)
-    print(f"✅  Sent to {phone}: \"{personalised_text}\"")
-
-# ── 4. Wrap-up ───────────────────────────────────────────────────────────────
-driver.quit()
-print("The script executed successfully.")
+print("\nAll messages have been sent. Browser will remain open. You can close it manually when done.")
