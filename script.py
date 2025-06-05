@@ -6,6 +6,7 @@ from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
+from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
 from urllib.parse import quote_plus
 from time import sleep
@@ -48,15 +49,16 @@ for _, row in data.iterrows():
     driver.get(url)
 
     try:
-        send_btn = WebDriverWait(driver, 3).until(
-            EC.element_to_be_clickable((By.CLASS_NAME, "x1c4vz4f"))
+        # Wait for the message input box to be present
+        input_box = WebDriverWait(driver, 3).until(
+            EC.presence_of_element_located((By.XPATH, '//div[@contenteditable="true"][@data-tab="10"]'))
         )
     except Exception:
         print(f"❌  Could not open chat for {phone}")
         continue
 
     sleep(2)
-    send_btn.click()
+    input_box.send_keys(Keys.ENTER)
     sleep(5)
     print(f"✅  Sent to {phone}: \"{personalised_text}\"")
 
