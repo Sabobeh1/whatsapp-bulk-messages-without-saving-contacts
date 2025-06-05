@@ -1,40 +1,65 @@
-# Program to send bulk messages through WhatsApp web from an excel sheet without saving contact numbers
-# Author @inforkgodara
+# Bulk WhatsApp sender using a CSV file with dynamic message templates
+# Author @inforkgodara | Refactored by ChatGPT
 
 from selenium import webdriver
+from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from webdriver_manager.chrome import ChromeDriverManager
+from urllib.parse import quote_plus
 from time import sleep
-import pandas
+import pandas as pd
 
-excel_data = pandas.read_excel('Recipients data.xlsx', sheet_name='Recipients')
+# ── 1. Load contacts ─────────────────────────────────────────────────────────
+# Required columns:
+#   Number    – phone number with country code (no "+")
+#   Name      – recipient's name
+data = pd.read_csv("breakfast.csv")
 
-count = 0
+# ── 2. Launch WhatsApp Web ───────────────────────────────────────────────────
+options = webdriver.ChromeOptions()
+driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+driver.get("https://web.whatsapp.com")
+input("Press ENTER after scanning the QR code and your chats are visible …")
 
-driver = webdriver.Chrome(ChromeDriverManager().install())
-driver.get('https://web.whatsapp.com')
-input("Press ENTER after login into Whatsapp Web and your chats are visiable.")
-for column in excel_data['Contact'].tolist():
+# ── 3. Send personalised messages ───────────────────────────────────────────
+for _, row in data.iterrows():
+    # Clean phone number: remove spaces, hyphens, and ensure it starts with country code
+    phone = str(row["Number"]).replace(" ", "").replace("-", "")
+    if not phone.startswith("+"):
+        phone = "+" + phone
+
+    # Use a default template
+    template = "Hello {Name}, this is a test message from the WhatsApp bulk sender script!"
+
+    # Replace {Name} placeholder
     try:
-        url = 'https://web.whatsapp.com/send?phone={}&text={}'.format(excel_data['Contact'][count], excel_data['Message'][0])
-        sent = False
-        # It tries 3 times to send a message in case if there any error occurred
-        driver.get(url)
-        try:
-            click_btn = WebDriverWait(driver, 35).until(
-                EC.element_to_be_clickable((By.CLASS_NAME, '_3XKXx')))
-        except Exception as e:
-            print("Sorry message could not sent to " + str(excel_data['Contact'][count]))
-        else:
-            sleep(2)
-            click_btn.click()
-            sent = True
-            sleep(5)
-            print('Message sent to: ' + str(excel_data['Contact'][count]))
-        count = count + 1
-    except Exception as e:
-        print('Failed to send message to ' + str(excel_data['Contact'][count]) + str(e))
+        personalised_text = template.format(**row.to_dict())
+    except KeyError as err:
+        print(f"⚠️  Missing column for placeholder {err} in row with phone {phone}")
+        continue
+
+    # URL-encode the final text (spaces → %20, line breaks → %0A, etc.)
+    message = quote_plus(personalised_text)
+
+    url = f"https://web.whatsapp.com/send?phone={phone}&text={message}"
+    print(f"Attempting to send message to {phone}...")
+    driver.get(url)
+
+    try:
+        send_btn = WebDriverWait(driver, 3).until(
+            EC.element_to_be_clickable((By.CLASS_NAME, "x1c4vz4f"))
+        )
+    except Exception:
+        print(f"❌  Could not open chat for {phone}")
+        continue
+
+    sleep(2)
+    send_btn.click()
+    sleep(5)
+    print(f"✅  Sent to {phone}: \"{personalised_text}\"")
+
+# ── 4. Wrap-up ───────────────────────────────────────────────────────────────
 driver.quit()
 print("The script executed successfully.")
