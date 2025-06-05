@@ -61,15 +61,15 @@ for _, row in data.iterrows():
             )
             print(f"Clicking 'Continue to Chat' for {phone}...")
             continue_button.click()
-            sleep(2)  # Wait for chat to open
+            sleep(1)  # Reduced from 2 to 1 second
         except:
             # If no "Continue to Chat" button, we're already in the chat
             pass
 
         # Now try to send the message
-        sleep(2)
+        sleep(1)  # Reduced from 2 to 1 second
         input_box.send_keys(Keys.ENTER)
-        sleep(5)
+        sleep(1)  # Reduced from 5 to 1 second
         print(f"✅  Sent to {phone}: \"{personalised_text}\"")
     except Exception as e:
         print(f"❌  Could not open chat for {phone}")
