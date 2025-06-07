@@ -25,6 +25,7 @@ driver.get("https://web.whatsapp.com")
 input("Press ENTER after scanning the QR code and your chats are visible …")
 
 # ── 3. Send personalised messages ───────────────────────────────────────────
+failed_contacts = []
 for _, row in data.iterrows():
     # Clean phone number: remove spaces, hyphens, and ensure it starts with country code
     phone = str(row["Number"]).replace(" ", "").replace("-", "")
@@ -49,30 +50,54 @@ for _, row in data.iterrows():
     driver.get(url)
 
     try:
-        # Wait for either the message input box or the "Continue to Chat" button
-        input_box = WebDriverWait(driver, 35).until(
-            EC.presence_of_element_located((By.XPATH, '//div[@contenteditable="true"][@data-tab="10"]'))
+        # Wait for the main content area to load. This is a reliable way to know
+        # the page has progressed. A 15-second timeout is a good balance for
+        # speed and reliability.
+        WebDriverWait(driver, 15).until(
+            EC.presence_of_element_located((By.ID, "main"))
         )
         
-        # Check if we need to click "Continue to Chat" button
-        try:
-            continue_button = WebDriverWait(driver, 5).until(
-                EC.element_to_be_clickable((By.XPATH, '//div[@role="button"][@title="Continue to Chat"]'))
-            )
+        # Use find_elements (plural) to check for the "Continue to Chat" button
+        # without waiting. It returns an empty list if the element is not found.
+        continue_to_chat_button = driver.find_elements(By.XPATH, '//div[@role="button"][@title="Continue to Chat"]')
+        
+        if continue_to_chat_button:
+            # If the button exists, we are on the intermediate page.
             print(f"Clicking 'Continue to Chat' for {phone}...")
-            continue_button.click()
-            sleep(1)  # Reduced from 2 to 1 second
-        except:
-            # If no "Continue to Chat" button, we're already in the chat
-            pass
+            continue_to_chat_button[0].click()
+            # After clicking, we must explicitly wait for the input box to appear.
+            input_box = WebDriverWait(driver, 10).until(
+                EC.presence_of_element_located((By.XPATH, '//div[@contenteditable="true"][@data-tab="10"]'))
+            )
+        else:
+            # If the button doesn't exist, we should be on the chat page already.
+            # We can find the input box directly. This will throw an error if not found,
+            # which is caught by the 'except' block.
+            input_box = driver.find_element(By.XPATH, '//div[@contenteditable="true"][@data-tab="10"]')
 
-        # Now try to send the message
-        sleep(1)  # Reduced from 2 to 1 second
+        # Now that we have the input_box, send the message.
         input_box.send_keys(Keys.ENTER)
-        sleep(1)  # Reduced from 5 to 1 second
+
+        # A minimal sleep to ensure the message is sent before the browser navigates away.
+        sleep(0.5)
         print(f"✅  Sent to {phone}: \"{personalised_text}\"")
+
     except Exception as e:
-        print(f"❌  Could not open chat for {phone}")
+        # This will catch various errors, including:
+        # - "main" container not loading (likely an invalid number pop-up)
+        # - "Continue to Chat" was clicked but the input box never appeared
+        # - Neither "Continue to Chat" nor the input box were found
+        print(f"❌  Failed to send to {phone}. It might be an invalid number or a page load error.")
+        failed_contacts.append(row)
         continue
 
 print("\nAll messages have been sent. Browser will remain open. You can close it manually when done.")
+
+# ── 4. Save failed contacts to a new CSV file ──────────────────────────────
+if failed_contacts:
+    print("\nSaving failed contacts to invalid_numbers.csv...")
+    failed_df = pd.DataFrame(failed_contacts)
+    # Reorder columns to match original if necessary, and drop pandas's name column
+    failed_df = failed_df.rename_axis(None, axis=1)[data.columns]
+    failed_df.to_csv("invalid_numbers.csv", index=False)
+    print("✅  Saved invalid numbers to invalid_numbers.csv")
