@@ -21,7 +21,7 @@ data = pd.read_csv("breakfast.csv")
 # Path to the image to be sent.
 # Leave as "" or a non-existent path to send only text messages.
 # IMPORTANT: Use the full path to the image if it's not in the same folder.
-IMAGE_PATH = "C:/Users/HP/Pictures/Screenshots/test.png"  # e.g., "C:/Users/YourUser/Pictures/holiday_card.png"
+IMAGE_PATH = ""  # e.g., "C:/Users/YourUser/Pictures/holiday_card.png"
 
 # Check if the image exists. The script will send the image only if the path is valid.
 SEND_IMAGE = os.path.exists(IMAGE_PATH)
@@ -143,3 +143,4 @@ if failed_contacts:
     failed_df = failed_df.rename_axis(None, axis=1)[data.columns]
     failed_df.to_csv("invalid_numbers.csv", index=False)
     print("✅  Saved invalid numbers to invalid_numbers.csv")
+
