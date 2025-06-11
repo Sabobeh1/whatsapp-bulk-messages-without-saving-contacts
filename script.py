@@ -9,7 +9,7 @@ from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
 from webdriver_manager.chrome import ChromeDriverManager
-from time import sleep
+from time import sleep, time
 import pandas as pd
 
 # ── 1. Load contacts and image ────────────────────────────────────────────────
@@ -38,14 +38,17 @@ input("Press ENTER after scanning the QR code and your chats are visible …")
 
 # ── 3. Send personalised messages ───────────────────────────────────────────
 failed_contacts = []
-for _, row in data.iterrows():
+start_time = time()
+total_messages = len(data)
+
+for i, (_, row) in enumerate(data.iterrows()):
     # Clean phone number: remove spaces, hyphens, and ensure it starts with country code
     phone = str(row["Number"]).replace(" ", "").replace("-", "")
     if not phone.startswith("+"):
         phone = "+" + phone
 
     # Use a default template
-    template = "Hello {Name}, this is a test message from the WhatsApp bulk sender script!"
+    template = "======= {Name}, this is a test message from the WhatsApp bulk sender script!"
 
     # Replace {Name} placeholder
     try:
@@ -56,7 +59,7 @@ for _, row in data.iterrows():
 
     # The message is now sent by typing, so URL encoding is no longer needed.
     url = f"https://web.whatsapp.com/send?phone={phone}"
-    print(f"Attempting to open chat with {phone}...")
+    print(f"Sending message {i+1}/{total_messages} to {phone}...")
     driver.get(url)
 
     try:
@@ -86,11 +89,11 @@ for _, row in data.iterrows():
 
             # 1. Wait for and click the attach button using the new selector
             attach_button_xpath = '//button[@title="Attach"]'
-            attach_button = WebDriverWait(driver, 15).until(
+            attach_button = WebDriverWait(driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, attach_button_xpath))
             )
             attach_button.click()
-            sleep(1) # Brief pause for the attach menu to open
+            sleep(0.5) # Brief pause for the attach menu to open
 
             # 2. Find the hidden file input for "Photos & Videos" and send the image path
             image_input = driver.find_element(By.XPATH, '//input[@accept="image/*,video/mp4,video/3gpp,video/quicktime"]')
@@ -109,7 +112,7 @@ for _, row in data.iterrows():
             
             # 5. Wait for and click the send button, identified by its data-icon
             send_button_xpath = '//span[@data-icon="send"]'
-            send_button = WebDriverWait(driver, 15).until(
+            send_button = WebDriverWait(driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, send_button_xpath))
             )
             send_button.click()
@@ -122,8 +125,8 @@ for _, row in data.iterrows():
                 input_box.send_keys(Keys.SHIFT, Keys.ENTER)
             input_box.send_keys(Keys.ENTER)
 
-        # A longer sleep to ensure the message is sent, especially for images.
-        sleep(3)
+        # A shorter sleep to make sending faster.
+        sleep(1)
         print(f"✅  Sent to {phone}: \"{personalised_text.replace('n', ' ')}\"")
 
     except Exception as e:
@@ -133,7 +136,17 @@ for _, row in data.iterrows():
         failed_contacts.append(row)
         continue
 
-print("\nAll messages have been sent. Browser will remain open. You can close it manually when done.")
+end_time = time()
+duration = end_time - start_time
+messages_sent = total_messages - len(failed_contacts)
+
+print(f"\n--- Sending Report ---")
+print(f"Total time taken: {duration:.2f} seconds")
+if messages_sent > 0:
+    print(f"Average time per message: {duration / messages_sent:.2f} seconds")
+print(f"Successfully sent: {messages_sent}/{total_messages}")
+print(f"Failed to send: {len(failed_contacts)}/{total_messages}")
+print("Browser will remain open. You can close it manually when done.")
 
 # ── 4. Save failed contacts to a new CSV file ──────────────────────────────
 if failed_contacts:
