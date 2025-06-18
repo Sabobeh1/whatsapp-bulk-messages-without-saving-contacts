@@ -16,19 +16,19 @@ import pandas as pd
 # Required columns:
 #   Number    – phone number with country code (no "+")
 #   Name      – recipient's name
-data = pd.read_csv("breakfast.csv")
+data = pd.read_csv("C:/Users/HP/Desktop/for qais/Marketing_expanded_full.csv")
 
-# Path to the image to be sent.
+# Path to the media file to be sent (image or video).
 # Leave as "" or a non-existent path to send only text messages.
-# IMPORTANT: Use the full path to the image if it's not in the same folder.
-IMAGE_PATH = "/Users/leluxegroup/Downloads/images.jpeg"  # e.g., "C:/Users/YourUser/Pictures/holiday_card.png"
+# IMPORTANT: Use the full path to the file if it's not in the same folder.
+MEDIA_PATH = "test.mp4"  # e.g., "C:/Users/YourUser/Pictures/holiday_card.png"
 
-# Check if the image exists. The script will send the image only if the path is valid.
-SEND_IMAGE = os.path.exists(IMAGE_PATH)
-if IMAGE_PATH and not SEND_IMAGE:
-    print(f"⚠️  Image not found at '{IMAGE_PATH}'. The script will only send text messages.")
-elif SEND_IMAGE:
-    print(f"✅  Image found at '{IMAGE_PATH}'. Script will send this image with captions.")
+# Check if the media file exists. The script will send the file only if the path is valid.
+SEND_MEDIA = os.path.exists(MEDIA_PATH)
+if MEDIA_PATH and not SEND_MEDIA:
+    print(f"⚠️  Media file not found at '{MEDIA_PATH}'. The script will only send text messages.")
+elif SEND_MEDIA:
+    print(f"✅  Media file found at '{MEDIA_PATH}'. Script will send this file with captions.")
 
 # ── 2. Launch WhatsApp Web ───────────────────────────────────────────────────
 options = webdriver.ChromeOptions()
@@ -43,12 +43,25 @@ total_messages = len(data)
 
 for i, (_, row) in enumerate(data.iterrows()):
     # Clean phone number: remove spaces, hyphens, and ensure it starts with country code
-    phone = str(row["Number"]).replace(" ", "").replace("-", "")
+    phone = str(row["رقم الجوال"]).replace(" ", "").replace("-", "")
     if not phone.startswith("+"):
         phone = "+" + phone
 
     # Use a default template
-    template = "======= {Name}, this is a test message from the WhatsApp bulk sender script!"
+    template ="""رسالة اختبار للتوول،
+نتمنى لكم يوم سعيد من افضل شركة في العالم !
+
+مرحباً السادة شركة {اسم المدير} المحترمين،
+معكم سارة من شركة WM Marketing.
+
+فيديوهات تحكي قصتك بأدق التفاصيل وباحترافية ما بتلاقيها إلا عندنا!
+من التصوير الإبداعي، لمونتاج متقن، حتى الرسومات المتحركة والـ3D – كل شيء تحت سقف واحد.
+نحول فكرتك لصورة حية تثير الإعجاب وتشد الانتباه.
+
+✨ إذا بدكم فيديو يُظهر شغلكم بأفضل شكل، إحنا جاهزين نساعدكم.
+
+ابعتوا "مهتم" وخلي فريقنا يتواصل معكم ليساعدكم.
+"""
 
     # Replace {Name} placeholder
     try:
@@ -82,10 +95,10 @@ for i, (_, row) in enumerate(data.iterrows()):
             EC.presence_of_element_located((By.XPATH, input_box_xpath))
         )
 
-        if SEND_IMAGE:
+        if SEND_MEDIA:
             # Using abspath to ensure the file path is correct
-            absolute_image_path = os.path.abspath(IMAGE_PATH)
-            print(f"-> Attempting to send image from: {absolute_image_path}")
+            absolute_media_path = os.path.abspath(MEDIA_PATH)
+            print(f"-> Attempting to send media from: {absolute_media_path}")
 
             # 1. Wait for and click the attach button using the new selector
             attach_button_xpath = '//button[@title="Attach"]'
@@ -95,9 +108,9 @@ for i, (_, row) in enumerate(data.iterrows()):
             attach_button.click()
             sleep(0.5) # Brief pause for the attach menu to open
 
-            # 2. Find the hidden file input for "Photos & Videos" and send the image path
-            image_input = driver.find_element(By.XPATH, '//input[@accept="image/*,video/mp4,video/3gpp,video/quicktime"]')
-            image_input.send_keys(absolute_image_path)
+            # 2. Find the hidden file input for "Photos & Videos" and send the media path
+            media_input = driver.find_element(By.XPATH, '//input[@accept="image/*,video/mp4,video/3gpp,video/quicktime"]')
+            media_input.send_keys(absolute_media_path)
             
             # 3. Wait for the caption box using the more reliable aria-label
             caption_box_xpath = '//div[@aria-label="Add a caption"]'
@@ -106,18 +119,21 @@ for i, (_, row) in enumerate(data.iterrows()):
             )
             
             # 4. Type the caption
-            for line in personalised_text.split('\\n'):
+            for line in personalised_text.split('\n'):
                 caption_box.send_keys(line)
                 caption_box.send_keys(Keys.SHIFT, Keys.ENTER)
             
-            # 5. Wait for and click the send button, identified by its data-icon
-            send_button_xpath = '//span[@data-icon="send"]'
+            # Add a brief pause to ensure the send button is ready after typing
+            sleep(1)
+
+            # 5. Wait for and click the send button, using the more stable aria-label selector
+            send_button_xpath = '//div[@aria-label="Send"]'
             send_button = WebDriverWait(driver, 10).until(
                 EC.element_to_be_clickable((By.XPATH, send_button_xpath))
             )
             send_button.click()
 
-        else: # If not sending an image, send a standard text message
+        else: # If not sending media, send a standard text message
             print("-> Sending text message...")
             # Type the message, splitting by newline characters
             for line in personalised_text.split('\n'):
@@ -125,8 +141,9 @@ for i, (_, row) in enumerate(data.iterrows()):
                 input_box.send_keys(Keys.SHIFT, Keys.ENTER)
             input_box.send_keys(Keys.ENTER)
 
-        # A shorter sleep to make sending faster.
-        sleep(1)
+        # Increase sleep duration to allow media to upload and send completely.
+        # This is crucial for larger files like videos.
+        sleep(5)
         print(f"✅  Sent to {phone}: \"{personalised_text.replace('n', ' ')}\"")
 
     except Exception as e:
