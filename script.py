@@ -3,12 +3,10 @@
 
 import os
 from selenium import webdriver
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.common.by import By
 from selenium.webdriver.common.keys import Keys
-from webdriver_manager.chrome import ChromeDriverManager
 from time import sleep, time
 import pandas as pd
 
@@ -16,7 +14,7 @@ import pandas as pd
 # Required columns:
 #   Number    – phone number with country code (no "+")
 #   Name      – recipient's name
-data = pd.read_csv("C:/Users/HP/Desktop/for qais/Marketing_expanded_full.csv")
+data = pd.read_csv("Marketing_expanded_full.csv")
 
 # Path to the media file to be sent (image or video).
 # Leave as "" or a non-existent path to send only text messages.
@@ -32,7 +30,7 @@ elif SEND_MEDIA:
 
 # ── 2. Launch WhatsApp Web ───────────────────────────────────────────────────
 options = webdriver.ChromeOptions()
-driver = webdriver.Chrome(service=Service(ChromeDriverManager().install()), options=options)
+driver = webdriver.Chrome(options=options)
 driver.get("https://web.whatsapp.com")
 input("Press ENTER after scanning the QR code and your chats are visible …")
 
