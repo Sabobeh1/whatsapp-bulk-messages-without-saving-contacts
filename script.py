@@ -14,7 +14,7 @@ import pandas as pd
 # Required columns:
 #   Number    – phone number with country code (no "+")
 #   Name      – recipient's name
-data = pd.read_csv("Marketing_expanded_full.csv")
+data = pd.read_csv("Marketing_expanded_full2.csv")
 
 # Path to the media file to be sent (image or video).
 # Leave as "" or a non-existent path to send only text messages.
